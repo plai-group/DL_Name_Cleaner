@@ -53,8 +53,8 @@ class DataGenerator():
                     full_middle += noised_middle + add_on
                     middle_classification += len(noised_middle) * 'm' + add_on
                 else:
-                    middle = self.generateName(self.fn_generator)
-                    noised_middle = noise_name(middle, NOISE_CHARS, 0.1)
+                    middle, noised_middle = self.generateName(
+                        self.fn_generator)
                     full_middle += noised_middle + ' '
                     middle_classification += len(noised_middle) * 'm' + ' '
 

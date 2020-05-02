@@ -29,22 +29,50 @@ class Pipeline(torch.nn.Module):
 
     def train(self, batch_sz: int, iterations: int):
         for i in range(iterations):
-            full, character_classifications = self.data_generator.generateFullName()
-            first, noised_first = self.data_generator.generateName(self.data_generator.fn_generator)
-            last, noised_last = self.data_generator.generateName(self.data_generator.ln_generator)
-            title, noised_title = self.data_generator.generateAux(TITLES)
-            suffix, noised_suffx = self.data_generator.generateAux(SUFFIXES)
+            fullnames, char_classes = [], []
+            firsts, noised_firsts = [], []
+            lasts, noised_lasts = [], []
+            titles, noised_titles = [], []
+            suffixes, noised_suffixes = [], []
+
+            for j in range(batch_sz):
+                full, character_classifications = self.data_generator.generateFullName()
+                first, noised_first = self.data_generator.generateName(
+                    self.data_generator.fn_generator)
+                last, noised_last = self.data_generator.generateName(
+                    self.data_generator.ln_generator)
+                title, noised_title = self.data_generator.generateAux(TITLES)
+                suffix, noised_suffix = self.data_generator.generateAux(
+                    SUFFIXES)
+
+                fullnames.append(full)
+                char_classes.append(character_classifications)
+                firsts.append(first)
+                noised_firsts.append(noised_first)
+                lasts.append(last)
+                noised_lasts.append(noised_last)
+                titles.append(title)
+                noised_titles.append(noised_title)
+                suffixes.append(suffix)
+                noised_suffixes.append(noised_suffix)
+
+            self.train_character_classifier(fullnames, char_classes)
+            self.train_aux_classifier(
+                self.title_classifier, titles, noised_titles)
+            self.train_aux_classifier(
+                self.suffix_classifier, suffixes, noised_suffixes)
+            self.train_DAE(self.first_DAE, firsts, noised_firsts)
+            self.train_DAE(self.last_DAE, lasts, noised_lasts)
 
     def train_character_classifier(self, src: list, trg: list):
         max_len = max(src, key=len)
         return False
 
-    def train_aux_classifiier(self, src: list, trg: list):
+    def train_aux_classifier(self, classifier: AuxClassifier, src: list, trg: list):
         max_src_len = max(src, key=len)
-        max_trg_len = max(trg, key=len)
         return False
 
-    def train_DAE(self, src: list, trg: list):
+    def train_DAE(self, dae: DenoisingAutoEncoder, src: list, trg: list):
         max_src_len = max(src, key=len)
         max_trg_len = max(trg, key=len)
         return False
