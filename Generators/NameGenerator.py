@@ -18,6 +18,7 @@ class NameGenerator():
         self.SOS = config['SOS']
         self.PAD = config['PAD']
         self.EOS = config['EOS']
+        self.probs = config['probs']
 
         self.lstm = LSTM(
             self.input_sz, self.hidden_sz, self.output_sz, self.embed_sz, self.num_layers)
@@ -56,3 +57,13 @@ class NameGenerator():
             ret += sample_char
 
         return ret
+    
+    def sampleName(self):
+        probs_tensor = torch.zeros(max(int(k) for k, v in self.probs.items()) + 1)
+
+        for key, value in self.probs.items():
+            probs_tensor[int(key)] = value
+
+        length = int(torch.distributions.Categorical(probs_tensor).sample().item())
+
+        return self.generateName(length)
