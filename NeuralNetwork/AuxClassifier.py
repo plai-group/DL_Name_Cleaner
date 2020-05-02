@@ -6,13 +6,14 @@ from Constant import *
 
 
 class AuxClassifier(nn.Module):
-    def __init__(self, input: list, hidden_sz: int, output_sz: int, num_layers: int = 4, embed_sz: int = 16,
+    def __init__(self, input: list, hidden_sz: int, output: list, num_layers: int = 4, embed_sz: int = 16,
                  drop_out: float = 0.1):
         super(AuxClassifier, self).__init__()
         self.input = input
         self.input_sz = len(input)
         self.hidden_sz = hidden_sz
-        self.output_sz = output_sz
+        self.output = output
+        self.output_sz = len(output)
         self.num_layers = num_layers
         self.embed_sz = embed_sz
         # 2 * num layers * hidden * 2 hs tensors

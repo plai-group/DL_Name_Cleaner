@@ -5,6 +5,8 @@ from Constant import *
 class CharacterClassifier(torch.nn.Module):
     def __init__(self, input: list, output: list, hidden_sz: int = 256, num_layers: int = 4, embed_dim: int = 4, dropout: float = 0.1):
         super(CharacterClassifier, self).__init__()
+        self.input = input
+        self.output = output
         self.input_sz = len(input)
         self.output_sz = len(output)
         self.embed = torch.nn.Embedding(self.input_sz, embed_dim)

@@ -22,9 +22,9 @@ class Pipeline(torch.nn.Module):
         self.last_DAE = DenoisingAutoEncoder(
             INPUT, DAE_OUTPUT, hidden_sz, num_layers)
         self.title_classifier = AuxClassifier(
-            printable_lst, hidden_sz, len(TITLES), num_layers)
+            printable_lst, hidden_sz, TITLES, num_layers)
         self.suffix_classifier = AuxClassifier(
-            printable_lst, hidden_sz, len(SUFFIXES), num_layers)
+            printable_lst, hidden_sz, SUFFIXES, num_layers)
         self.to(DEVICE)
 
     def train(self, batch_sz: int, iterations: int):
@@ -66,15 +66,21 @@ class Pipeline(torch.nn.Module):
 
     def train_character_classifier(self, src: list, trg: list):
         max_len = max(src, key=len)
+        in_vocab = self.character_classifier.input
+        out_vocab = self.character_classifier.output
         return False
 
     def train_aux_classifier(self, classifier: AuxClassifier, src: list, trg: list):
         max_src_len = max(src, key=len)
+        in_vocab = classifier.input
+        out_vocab = classifier.output
         return False
 
     def train_DAE(self, dae: DenoisingAutoEncoder, src: list, trg: list):
         max_src_len = max(src, key=len)
         max_trg_len = max(trg, key=len)
+        in_vocab = dae.input
+        out_vocab = dae.output
         return False
 
     def test(self, df: pandas.DataFrame):
