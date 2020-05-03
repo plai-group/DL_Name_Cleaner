@@ -32,7 +32,7 @@ class AuxClassifier(nn.Module):
         batch_sz = lengths.shape[0]
         embedded_input = self.embed(input)
         packed_input = torch.nn.utils.rnn.pack_padded_sequence(
-            embedded_input, lengths)
+            embedded_input, lengths, enforce_sorted=False)
 
         output, (hidden, cell) = self.lstm.forward(
             packed_input, self.init_hidden(batch_sz))

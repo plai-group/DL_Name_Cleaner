@@ -30,7 +30,7 @@ class DenoisingAutoEncoder(nn.Module):
         batch_sz = lengths.shape[0]
         embedded_input = self.encoder_embed(names)
         pps_input = torch.nn.utils.rnn.pack_padded_sequence(
-            embedded_input, lengths)
+            embedded_input, lengths, enforce_sorted=False)
         output, hidden = self.encoder_lstm(
             pps_input, self.init_hidden(batch_sz))
         output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)
