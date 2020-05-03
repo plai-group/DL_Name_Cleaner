@@ -21,7 +21,7 @@ class DenoisingAutoEncoder(nn.Module):
         self.decoder_embed = nn.Embedding(self.output_sz, embed_dim)
         self.decoder_lstm = nn.LSTM(embed_dim, hidden_sz, num_layers * 2)
         self.decoder_fc1 = nn.Linear(hidden_sz, self.output_sz)
-        self.softmax = nn.LogSoftmax(dim=2)
+        self.softmax = nn.Softmax(dim=2)
         self.dropout = nn.Dropout(drop_out)
 
         self.to(DEVICE)
