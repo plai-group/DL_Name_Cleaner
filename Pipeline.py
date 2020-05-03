@@ -12,7 +12,7 @@ from Constant import *
 
 
 class Pipeline(torch.nn.Module):
-    def __init__(self, name: str, hidden_sz: int = 256, num_layers: int = 6, learning_rate: float = 0.00005):
+    def __init__(self, name: str, hidden_sz: int = 256, num_layers: int = 4, learning_rate: float = 0.00005):
         super(Pipeline, self).__init__()
         self.session_name = name
         printable_lst = [c for c in string.printable] + [EOS, PAD]
@@ -180,21 +180,42 @@ class Pipeline(torch.nn.Module):
         return False
 
     def save_checkpoint(self, folder: str = 'Weights'):
-        fp = os.path.join(folder, self.session_name)
+        dae_fp = os.path.join(folder, f'{self.session_name}_dae')
+        aux_fp = os.path.join(folder, f'{self.session_name}_aux')
+        classifier_fp = os.path.join(folder, f'{self.session_name}_classifier')
 
         if not os.path.exists(folder):
             os.mkdir(folder)
 
-        content = {'weights': self.state_dict()}
+        dae_content = {'fn_weight': self.first_DAE.state_dict(),
+                       'ln_weight': self.last_DAE.state_dict()}
+        aux_content = {'title_weight': self.title_classifier.state_dict(),
+                       'suffix_weight': self.suffix_classifier.state_dict()}
+        classifier_content = {
+            'classifier': self.character_classifier.state_dict()}
 
-        torch.save(content, fp)
+        torch.save(dae_content, dae_fp)
+        torch.save(aux_content, aux_fp)
+        torch.save(classifier_content, classifier_fp)
 
     def load_checkpoint(self, name: str, folder: str = 'Weights'):
         if name is None:
             name = self.session_name
 
-        self.load_state_dict(torch.load(
-            f'{folder}/{name}.path.tar')['weights'])
+        dae_fp = os.path.join(folder, f'{name}_dae')
+        aux_fp = os.path.join(folder, f'{name}_aux')
+        classifier_fp = os.path.join(folder, f'{name}_classifier')
+
+        dae_content = torch.load(dae_fp, map_location=DEVICE)
+        aux_content = torch.load(aux_fp, map_location=DEVICE)
+        classifier_content = torch.load(classifier_fp, map_location=DEVICE)
+
+        self.first_DAE.load_state_dict(dae_content['fn_weight'])
+        self.last_DAE.load_state_dict(dae_content['ln_weight'])
+        self.title_classifier.load_state_dict(aux_content['title_weight'])
+        self.suffix_classifier.load_state_dict(aux_content['suffix_weight'])
+        self.character_classifier.load_state_dict(
+            classifier_content['classifier'])
 
     def plot_losses(self, loss: list, x_label: str, y_label: str, folder: str = "Plot"):
         x = list(range(len(loss)))

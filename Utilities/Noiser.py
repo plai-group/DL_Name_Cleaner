@@ -93,5 +93,8 @@ def noise_name(name: str, allowed_noise_chars: list, noise_prob: float):
                 torch.FloatTensor([1/replacements_len] * replacements_len)).sample().int())
             sampled_char = replacements[sampled_idx]
             noised_name = noised_name + sampled_char
+        else:
+            if len(noised_name) < 1 and i == (name_length - 1):
+                noised_name += current_char
 
     return noised_name
