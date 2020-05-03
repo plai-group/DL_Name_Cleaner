@@ -20,6 +20,8 @@ class CharacterClassifier(torch.nn.Module):
         self.softmax = torch.nn.Softmax(dim=1)
         self.dropout = torch.nn.Dropout(dropout)
 
+        self.to(DEVICE)
+
     def encode(self, input: torch.Tensor, lengths: torch.Tensor):
         batch_sz = input.shape[1]
         hidden = self.init_hidden(batch_sz)

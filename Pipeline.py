@@ -6,7 +6,7 @@ from Generators.DataGenerator import DataGenerator
 from NeuralNetwork.DAE import DenoisingAutoEncoder
 from NeuralNetwork.AuxClassifier import AuxClassifier
 from NeuralNetwork.CharacterClassifier import CharacterClassifier
-from Utilities.Utilities import convertToIdxList, convertToIdxListWStartEnd
+from Utilities.Utilities import convertToIdxList
 from Constant import *
 
 
@@ -32,7 +32,7 @@ class Pipeline(torch.nn.Module):
 
     def train(self, batch_sz: int, iterations: int) -> int:
         for i in range(iterations):
-            fullnames, char_classes = [], []
+            full_noised_names, char_classes = [], []
             firsts, noised_firsts = [], []
             lasts, noised_lasts = [], []
             titles, noised_titles = [], []
@@ -48,7 +48,7 @@ class Pipeline(torch.nn.Module):
                 suffix, noised_suffix = self.data_generator.generateAux(
                     SUFFIXES)
 
-                fullnames.append(full)
+                full_noised_names.append(full)
                 char_classes.append(character_classifications)
                 firsts.append(first)
                 noised_firsts.append(noised_first)
@@ -59,13 +59,13 @@ class Pipeline(torch.nn.Module):
                 suffixes.append(suffix)
                 noised_suffixes.append(noised_suffix)
 
-            self.train_character_classifier(fullnames, char_classes)
+            self.train_character_classifier(full_noised_names, char_classes)
             self.train_aux_classifier(
                 self.title_classifier, noised_titles, titles)
             self.train_aux_classifier(
                 self.suffix_classifier, noised_suffixes, suffixes)
-            self.train_DAE(self.first_DAE, firsts, noised_firsts)
-            self.train_DAE(self.last_DAE, lasts, noised_lasts)
+            self.train_DAE(self.first_DAE, noised_firsts, firsts)
+            self.train_DAE(self.last_DAE, noised_lasts, lasts)
 
     def train_character_classifier(self, src: list, trg: list):
         criterion = torch.nn.CrossEntropyLoss()
@@ -116,7 +116,7 @@ class Pipeline(torch.nn.Module):
         output = classifier.forward(input, len_input)
 
         loss += criterion(output, trg)
-
+        loss.backward()
         optimizer.step()
 
         return loss
@@ -132,17 +132,23 @@ class Pipeline(torch.nn.Module):
         in_vocab = dae.input
         out_vocab = dae.output
 
-        input = torch.LongTensor(convertToIdxList(
-            src, in_vocab, max_src_len)).transpose(0,1).to(DEVICE)
+        # Encoder inputs
+        encoder_in = torch.LongTensor(convertToIdxList(
+            src, in_vocab, max_src_len)).transpose(0, 1).to(DEVICE)
         len_input = torch.LongTensor([len(name) for name in src]).to(DEVICE)
-        trg = torch.LongTensor(convertToIdxListWStartEnd(
-            trg, out_vocab, max_trg_len, True)).transpose(0,1).to(DEVICE)
 
-        _, hidden = dae.encode(input, len_input)
+        # Decoder inputs and target
+        decoder_in = torch.LongTensor(convertToIdxList(
+            trg, out_vocab, max_trg_len, w_start=True)).transpose(0,1).to(DEVICE)
+        trg_tnsr = torch.LongTensor(convertToIdxList(
+            trg, out_vocab, max_trg_len, w_end=True)).transpose(0, 1).to(DEVICE)
 
-        for i in range(max_trg_len - 1):
-            output, hidden = dae.forward(trg[i], hidden)
-            loss += criterion(output, trg[i + 1])
+        _, hidden = dae.encode(encoder_in, len_input)
+
+        # Should be max_trg_len + 1 for SOS and EOS
+        for i in range(max_trg_len + 1):
+            output, hidden = dae.forward(decoder_in[i].unsqueeze(0), hidden)
+            loss += criterion(output[0], trg_tnsr[i])
 
         loss.backward()
         optimizer.step()

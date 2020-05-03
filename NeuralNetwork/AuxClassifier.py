@@ -16,16 +16,18 @@ class AuxClassifier(nn.Module):
         self.output_sz = len(output)
         self.num_layers = num_layers
         self.embed_sz = embed_sz
-        # 2 * num layers * hidden * 2 hs tensors
-        self.fc1_input_sz = self.hidden_sz * (4 * self.num_layers)
+        self.fc1_input_sz = (self.hidden_sz * 2 * self.num_layers) * 2
 
         self.embed = nn.Embedding(
             self.input_sz, self.embed_sz, self.input.index(PAD))
         self.lstm = nn.LSTM(self.embed_sz, self.hidden_sz,
                             num_layers=num_layers, bidirectional=True).to(DEVICE)
         self.fc1 = nn.Linear(self.fc1_input_sz, self.output_sz)
+        self.sigmoid = nn.Sigmoid()
+        self.fc2 = nn.Linear(self.output_sz, self.output_sz)
         self.dropout = nn.Dropout(drop_out)
-        self.softmax = nn.Softmax(dim=0)
+        self.softmax = nn.Softmax(dim=1)
+
         self.to(DEVICE)
 
     def forward(self, input: torch.Tensor, lengths: torch.IntTensor):
@@ -39,14 +41,15 @@ class AuxClassifier(nn.Module):
 
         # hidden is a tuple of 2 hidden tensors that are a forward and backward tensor in one
         hidden_states = torch.cat((hidden, cell), 2)
-        # TODO!!! need to fix this for fc1 batch training
-
+        hidden_states = hidden_states.transpose(0, 1).flatten(1, 2)
 
         output = self.fc1(hidden_states)
+        output = self.sigmoid(output)
+        output = self.fc2(output)
         output = self.dropout(output)
-        output = self.softmax(output)
+        probs = self.softmax(output)
 
-        return output
+        return probs
 
     def init_hidden(self, batch_sz: int):
         return (torch.zeros(2 * self.num_layers, batch_sz, self.hidden_sz).to(DEVICE),

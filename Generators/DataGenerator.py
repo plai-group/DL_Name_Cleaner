@@ -51,12 +51,13 @@ class DataGenerator():
                     middle = self.generateMiddleInitial()
                     noised_middle = middle
                     full_middle += noised_middle + add_on
-                    middle_classification += len(noised_middle) * 'm' + add_on
+                    middle_classification += (len(noised_middle)
+                                              * 'm') + add_on
                 else:
                     middle, noised_middle = self.generateName(
                         self.fn_generator)
                     full_middle += noised_middle + ' '
-                    middle_classification += len(noised_middle) * 'm' + ' '
+                    middle_classification += (len(noised_middle) * 'm') + ' '
 
             full_name = full_name.replace('{m}', full_middle[:-1])
             char_classification = char_classification.replace(
@@ -65,13 +66,13 @@ class DataGenerator():
         if bool(torch.distributions.Bernoulli(torch.FloatTensor([0.5])).sample().item()):
             title, noised_title = self.generateAux(TITLES)
             full_name = noised_title + '. ' + full_name
-            char_classification = len(noised_title) * \
-                't' + '. ' + char_classification
+            char_classification = (len(noised_title) *
+                                   't') + '. ' + char_classification
 
         if bool(torch.distributions.Bernoulli(torch.FloatTensor([0.5])).sample().item()):
             suffix, noised_suffix = self.generateAux(SUFFIXES)
             full_name += ' ' + noised_suffix
-            char_classification += ' ' + len(noised_suffix) * 's'
+            char_classification += ' ' + (len(noised_suffix) * 's')
 
         return full_name, char_classification
 

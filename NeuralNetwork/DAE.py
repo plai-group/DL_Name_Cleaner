@@ -17,10 +17,11 @@ class DenoisingAutoEncoder(nn.Module):
         self.encoder_embed = nn.Embedding(self.input_sz, embed_dim)
         self.encoder_lstm = nn.LSTM(
             embed_dim, hidden_sz, num_layers, bidirectional=True)
-
         self.decoder_embed = nn.Embedding(self.output_sz, embed_dim)
         self.decoder_lstm = nn.LSTM(embed_dim, hidden_sz, num_layers * 2)
         self.decoder_fc1 = nn.Linear(hidden_sz, self.output_sz)
+        self.sigmoid = nn.Sigmoid()
+        self.decoder_fc2 = nn.Linear(self.output_sz, self.output_sz)
         self.softmax = nn.Softmax(dim=2)
         self.dropout = nn.Dropout(drop_out)
 
@@ -37,12 +38,15 @@ class DenoisingAutoEncoder(nn.Module):
         return output, hidden
 
     def forward(self, input: torch.Tensor, hidden: torch.Tensor):
-        output, hidden = self.decoder_lstm.forward(input, hidden)
-        output = self.decoder_fc1(output)
-        output = self.dropout(output)
-        score = self.softmax(output)
+        embedded_input = self.decoder_embed(input)
+        output, hidden = self.decoder_lstm.forward(embedded_input, hidden)
+        fc1_output = self.decoder_fc1(output)
+        sig_output = self.sigmoid(fc1_output)
+        fc2_output = self.decoder_fc2(sig_output)
+        do_output = self.dropout(fc2_output)
+        probs = self.softmax(do_output)
 
-        return score, hidden
+        return probs, hidden
 
     def init_hidden(self, batch_sz):
         return (torch.zeros(self.num_layers * 2, batch_sz, self.hidden_sz).to(DEVICE),
