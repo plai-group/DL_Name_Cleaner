@@ -40,9 +40,10 @@ class NameGenerator():
 
             output, hidden = self.lstm.forward(input, length, hidden_state)
             return output, hidden
-    
+
     def generateName(self, length: int):
-        input = torch.LongTensor([self.input.index(self.SOS)]).unsqueeze(0).to(DEVICE)
+        input = torch.LongTensor(
+            [self.input.index(self.SOS)]).unsqueeze(0).to(DEVICE)
         length_input = torch.LongTensor([length]).unsqueeze(0).to(DEVICE)
         hidden = None
 
@@ -52,18 +53,21 @@ class NameGenerator():
             sample = int(torch.distributions.Categorical(
                 output.exp()).sample().item())
             sample_char = self.output[sample]
-            input = torch.LongTensor([self.input.index(sample_char)]).unsqueeze(0).to(DEVICE)
+            input = torch.LongTensor(
+                [self.input.index(sample_char)]).unsqueeze(0).to(DEVICE)
 
             ret += sample_char
 
         return ret
-    
+
     def sampleName(self):
-        probs_tensor = torch.zeros(max(int(k) for k, v in self.probs.items()) + 1)
+        probs_tensor = torch.zeros(max(int(k)
+                                       for k, v in self.probs.items()) + 1)
 
         for key, value in self.probs.items():
             probs_tensor[int(key)] = value
 
-        length = int(torch.distributions.Categorical(probs_tensor).sample().item())
+        length = int(torch.distributions.Categorical(
+            probs_tensor).sample().item())
 
         return self.generateName(length)

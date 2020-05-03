@@ -139,7 +139,7 @@ class Pipeline(torch.nn.Module):
 
         # Decoder inputs and target
         decoder_in = torch.LongTensor(convertToIdxList(
-            trg, out_vocab, max_trg_len, w_start=True)).transpose(0,1).to(DEVICE)
+            trg, out_vocab, max_trg_len, w_start=True)).transpose(0, 1).to(DEVICE)
         trg_tnsr = torch.LongTensor(convertToIdxList(
             trg, out_vocab, max_trg_len, w_end=True)).transpose(0, 1).to(DEVICE)
 
