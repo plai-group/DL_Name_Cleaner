@@ -30,7 +30,7 @@ class Pipeline(torch.nn.Module):
         self.learning_rate = learning_rate
         self.to(DEVICE)
 
-    def train(self, batch_sz: int, iterations: int):
+    def train(self, batch_sz: int, iterations: int) -> int:
         for i in range(iterations):
             fullnames, char_classes = [], []
             firsts, noised_firsts = [], []
@@ -61,9 +61,9 @@ class Pipeline(torch.nn.Module):
 
             self.train_character_classifier(fullnames, char_classes)
             self.train_aux_classifier(
-                self.title_classifier, titles, noised_titles)
+                self.title_classifier, noised_titles, titles)
             self.train_aux_classifier(
-                self.suffix_classifier, suffixes, noised_suffixes)
+                self.suffix_classifier, noised_suffixes, suffixes)
             self.train_DAE(self.first_DAE, firsts, noised_firsts)
             self.train_DAE(self.last_DAE, lasts, noised_lasts)
 
@@ -96,21 +96,22 @@ class Pipeline(torch.nn.Module):
 
         return loss
 
-    def train_aux_classifier(self, classifier: AuxClassifier, src: list, trg: list):
+    def train_aux_classifier(self, classifier: AuxClassifier, src: list, trg: list) -> int:
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(
             classifier.parameters(), lr=self.learning_rate)
         optimizer.zero_grad()
         loss = 0
 
-        max_src_len = max(src, key=len)
+        max_src_len = len(max(src, key=len))
         in_vocab = classifier.input
         out_vocab = classifier.output
 
         input = torch.LongTensor(convertToIdxList(
-            src, in_vocab, max_src_len)).to(DEVICE)
+            src, in_vocab, max_src_len)).transpose(0, 1).to(DEVICE)
         len_input = torch.LongTensor([len(name) for name in src]).to(DEVICE)
-        trg = torch.LongTensor(convertToIdxList(trg, out_vocab, 1)).to(DEVICE)
+        trg = torch.LongTensor([out_vocab.index(title)
+                                for title in trg]).to(DEVICE)
 
         output = classifier.forward(input, len_input)
 
@@ -120,22 +121,22 @@ class Pipeline(torch.nn.Module):
 
         return loss
 
-    def train_DAE(self, dae: DenoisingAutoEncoder, src: list, trg: list):
+    def train_DAE(self, dae: DenoisingAutoEncoder, src: list, trg: list) -> int:
         criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(dae.parameters(), lr=self.learning_rate)
         optimizer.zero_grad()
         loss = 0
 
-        max_src_len = max(src, key=len)
-        max_trg_len = max(trg, key=len)
+        max_src_len = len(max(src, key=len))
+        max_trg_len = len(max(trg, key=len))
         in_vocab = dae.input
         out_vocab = dae.output
 
         input = torch.LongTensor(convertToIdxList(
-            src, in_vocab, max_src_len)).to(DEVICE)
+            src, in_vocab, max_src_len)).transpose(0,1).to(DEVICE)
         len_input = torch.LongTensor([len(name) for name in src]).to(DEVICE)
         trg = torch.LongTensor(convertToIdxListWStartEnd(
-            trg, out_vocab, max_trg_len, True)).to(DEVICE)
+            trg, out_vocab, max_trg_len, True)).transpose(0,1).to(DEVICE)
 
         _, hidden = dae.encode(input, len_input)
 

@@ -39,7 +39,8 @@ class AuxClassifier(nn.Module):
 
         # hidden is a tuple of 2 hidden tensors that are a forward and backward tensor in one
         hidden_states = torch.cat((hidden, cell), 2)
-        hidden_states = hidden_states.flatten()
+        # TODO!!! need to fix this for fc1 batch training
+
 
         output = self.fc1(hidden_states)
         output = self.dropout(output)
