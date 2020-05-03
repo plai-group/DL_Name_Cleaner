@@ -2,6 +2,7 @@ import os
 import torch
 import pandas
 import string
+import matplotlib.pyplot as plt
 from Generators.DataGenerator import DataGenerator
 from NeuralNetwork.DAE import DenoisingAutoEncoder
 from NeuralNetwork.AuxClassifier import AuxClassifier
@@ -30,8 +31,11 @@ class Pipeline(torch.nn.Module):
         self.learning_rate = learning_rate
         self.to(DEVICE)
 
-    def train(self, batch_sz: int, iterations: int) -> int:
-        for i in range(iterations):
+    def train(self, batch_sz: int, iterations: int, save_every: int = 1, plot_every: int = 1) -> int:
+        all_losses = []
+        total_loss = 0
+
+        for i in range(1, iterations + 1):
             full_noised_names, char_classes = [], []
             firsts, noised_firsts = [], []
             lasts, noised_lasts = [], []
@@ -59,13 +63,27 @@ class Pipeline(torch.nn.Module):
                 suffixes.append(suffix)
                 noised_suffixes.append(noised_suffix)
 
-            self.train_character_classifier(full_noised_names, char_classes)
-            self.train_aux_classifier(
-                self.title_classifier, noised_titles, titles)
-            self.train_aux_classifier(
-                self.suffix_classifier, noised_suffixes, suffixes)
-            self.train_DAE(self.first_DAE, noised_firsts, firsts)
-            self.train_DAE(self.last_DAE, noised_lasts, lasts)
+            total_loss += self.train_character_classifier(
+                full_noised_names, char_classes).item()
+            total_loss += self.train_aux_classifier(
+                self.title_classifier, noised_titles, titles).item()
+            total_loss += self.train_aux_classifier(
+                self.suffix_classifier, noised_suffixes, suffixes).item()
+            total_loss += self.train_DAE(self.first_DAE,
+                                         noised_firsts, firsts).item()
+            total_loss += self.train_DAE(self.last_DAE,
+                                         noised_lasts, lasts).item()
+
+            if i % save_every == 0:
+                self.save_checkpoint()
+
+            if i % plot_every == 0:
+                all_losses.append(total_loss / plot_every)
+                total_loss = 0
+                self.plot_losses(
+                    all_losses, f'Iteration of {batch_sz} batch size', 'Cross Entropy Loss Sum')
+
+        self.save_checkpoint()
 
     def train_character_classifier(self, src: list, trg: list):
         criterion = torch.nn.CrossEntropyLoss()
@@ -162,7 +180,7 @@ class Pipeline(torch.nn.Module):
         return False
 
     def save_checkpoint(self, folder: str = 'Weights'):
-        fp = os.path.join(folder, self.name)
+        fp = os.path.join(folder, self.session_name)
 
         if not os.path.exists(folder):
             os.mkdir(folder)
@@ -170,3 +188,20 @@ class Pipeline(torch.nn.Module):
         content = {'weights': self.state_dict()}
 
         torch.save(content, fp)
+
+    def load_checkpoint(self, name: str, folder: str = 'Weights'):
+        if name is None:
+            name = self.session_name
+
+        self.load_state_dict(torch.load(
+            f'{folder}/{name}.path.tar')['weights'])
+
+    def plot_losses(self, loss: list, x_label: str, y_label: str, folder: str = "Plot"):
+        x = list(range(len(loss)))
+        plt.plot(x, loss, 'r--', label="Loss")
+        plt.title("Losses")
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.legend(loc='upper left')
+        plt.savefig(f"{folder}/{self.session_name}")
+        plt.close()

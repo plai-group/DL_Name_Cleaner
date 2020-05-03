@@ -68,7 +68,7 @@ def noise_name(name: str, allowed_noise_chars: list, noise_prob: float):
     # [no noise, add character, switch with similar, remove]
     if name_length == 1:
         noise_dist = torch.tensor(
-            [1 - noise_prob, (noise_prob / 2), (noise_prob / 2), 0, 0])
+            [1 - noise_prob] + ([(noise_prob / 2)] * 2) + [0])
     else:
         noise_dist = torch.tensor([1 - noise_prob] + [noise_prob / 3] * 3)
 
