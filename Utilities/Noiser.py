@@ -98,3 +98,12 @@ def noise_name(name: str, allowed_noise_chars: list, noise_prob: float):
                 noised_name += current_char
 
     return noised_name
+
+
+def noise_initial(char: str):
+    replacements = CHARACTER_REPLACEMENT[char]
+    replacements_len = len(replacements)
+    sampled_idx = int(torch.distributions.Categorical(
+        torch.FloatTensor([1/replacements_len] * replacements_len)).sample().int())
+
+    return replacements[sampled_idx]

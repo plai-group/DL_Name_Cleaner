@@ -3,7 +3,7 @@ import string
 import pandas
 from Generators.NameGenerator import NameGenerator
 from Constant import DEVICE, TITLES, SUFFIXES, NAME_FORMATS
-from Utilities.Noiser import noise_name
+from Utilities.Noiser import *
 
 
 class DataGenerator():
@@ -128,7 +128,7 @@ class DataGenerator():
         sample = int(torch.distributions.Categorical(probs).sample().item())
 
         initial = initials[sample]
-        noised_initial = noise_name(initial, self.noise_chars, self.noise_prob)
+        noised_initial = noise_initial(initial)
 
         return initial, noised_initial
 
