@@ -19,7 +19,7 @@ def doesTensorOnlyHasValues(tensor: torch.Tensor, values: list):
     return True
 
 
-class Pipeline(torch.nn.Module):
+class Pipeline():
     def __init__(self, name: str, hidden_sz: int = 128, num_layers: int = 3, learning_rate: float = 0.00005):
         super(Pipeline, self).__init__()
         self.session_name = name
@@ -38,7 +38,6 @@ class Pipeline(torch.nn.Module):
             printable_lst, hidden_sz, SUFFIXES, num_layers)
 
         self.learning_rate = learning_rate
-        self.to(DEVICE)
 
     def train(self, batch_sz: int, iterations: int, save_every: int = 1, plot_every: int = 1) -> int:
         all_losses = []
