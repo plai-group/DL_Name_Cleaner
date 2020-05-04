@@ -11,6 +11,14 @@ from Utilities.Utilities import convertToIdxList
 from Constant import *
 
 
+def doesTensorOnlyHasValues(tensor: torch.Tensor, values: list):
+    for i in range(len(tensor)):
+        if tensor[i].item() not in values:
+            return False
+
+    return True
+
+
 class Pipeline(torch.nn.Module):
     def __init__(self, name: str, hidden_sz: int = 128, num_layers: int = 3, learning_rate: float = 0.00005):
         super(Pipeline, self).__init__()
@@ -183,6 +191,75 @@ class Pipeline(torch.nn.Module):
 
     def test_name(self, name):
         return False
+
+    def test_character_classifier(self, inputs: list) -> list:
+        batch_sz = len(inputs)
+        max_len = len(max(inputs, key=len))
+        in_vocab = self.character_classifier.input
+        out_vocab = self.character_classifier.output
+
+        input = torch.LongTensor(convertToIdxList(
+            inputs, in_vocab, max_len)).transpose(0, 1).to(DEVICE)
+        length_lst = [len(name) for name in inputs]
+        length_tnsr = torch.LongTensor(length_lst).to(DEVICE)
+        trg = torch.LongTensor(convertToIdxList(
+            trg, out_vocab, max_len)).transpose(0, 1).to(DEVICE)
+
+        outputs, hidden = self.character_classifier.encode(input, length_tnsr)
+
+        classifications = []
+
+        for i in range(max_len):
+            probs = self.character_classifier.decode(outputs[i])
+            values, _ = probs.max(2)
+            classifications.extend([out_vocab[values[j]] for j in len(values)])
+
+        return classifications
+
+    def test_aux_classifier(self, classifier: AuxClassifier, inputs: list) -> list:
+        batch_sz = len(inputs)
+        max_src_len = len(max(inputs, key=len))
+        in_vocab = classifier.input
+        out_vocab = classifier.output
+
+        input = torch.LongTensor(convertToIdxList(
+            inputs, in_vocab, max_src_len)).transpose(0, 1).to(DEVICE)
+        len_input = torch.LongTensor([len(name) for name in inputs]).to(DEVICE)
+        trg = torch.LongTensor([out_vocab.index(title)
+                                for title in trg]).to(DEVICE)
+
+        output = classifier.forward(input, len_input)
+        max_values, _ = output.max(2)
+
+        return [out_vocab[max_values[i]] for i in len(max_values)]
+
+    def test_DAE(self, dae: DenoisingAutoEncoder, inputs: list) -> list:
+        batch_sz = len(inputs)
+        max_len = len(max(inputs, key=len))
+        in_vocab = dae.input
+        out_vocab = dae.output
+
+        # Encoder inputs
+        encoder_in = torch.LongTensor(convertToIdxList(
+            inputs, in_vocab, max_len)).transpose(0, 1).to(DEVICE)
+        len_input = torch.LongTensor([len(name) for name in inputs]).to(DEVICE)
+
+        _, hidden = dae.encode(encoder_in, len_input)
+        input = torch.LongTensor([in_vocab.index(SOS)] * batch_sz).to(DEVICE)
+        # Should be max_trg_len + 1 for SOS and EOS
+
+        all_EOS_or_PAD = False
+        end_of_seq_signals = [out_vocab.index(EOS), out_vocab.index(PAD)]
+        cleaned_names = []
+
+        while not all_EOS_or_PAD:
+            output, hidden = dae.forward(input, hidden)
+            input, _ = output.max(2)
+            cleaned_names.extend([out_vocab[input[i]]
+                                  for i in range(len(input))])
+            all_EOS_or_PAD = doesTensorOnlyHasValues(input, end_of_seq_signals)
+
+        return cleaned_names
 
     def save_checkpoint(self, folder: str = 'Weights'):
         dae_fn_fp = os.path.join(folder, f'{self.session_name}_fn_dae')
