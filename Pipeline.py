@@ -12,11 +12,12 @@ from Constant import *
 
 
 class Pipeline(torch.nn.Module):
-    def __init__(self, name: str, hidden_sz: int = 256, num_layers: int = 4, learning_rate: float = 0.00005):
+    def __init__(self, name: str, hidden_sz: int = 128, num_layers: int = 3, learning_rate: float = 0.00005):
         super(Pipeline, self).__init__()
         self.session_name = name
         printable_lst = [c for c in string.printable] + [EOS, PAD]
         self.data_generator = DataGenerator()
+
         self.character_classifier = CharacterClassifier(
             printable_lst, CHARACTER_CLASSIFICATIONS)
         self.first_DAE = DenoisingAutoEncoder(
