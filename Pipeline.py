@@ -38,16 +38,16 @@ class Pipeline(torch.nn.Module):
         for i in range(1, iterations + 1):
             full_noised_names, char_classes = [], []
             firsts, noised_firsts = [], []
+            middle_initials, noised_middle_initials = [], []
             lasts, noised_lasts = [], []
             titles, noised_titles = [], []
             suffixes, noised_suffixes = [], []
 
             for j in range(batch_sz):
                 full, character_classifications = self.data_generator.generateFullName()
-                first, noised_first = self.data_generator.generateName(
-                    self.data_generator.fn_generator)
-                last, noised_last = self.data_generator.generateName(
-                    self.data_generator.ln_generator)
+                first, noised_first = self.data_generator.sampleFirstName()
+                middle_init, noised_middle_init = self.data_generator.generateMiddleInitial()
+                last, noised_last = self.data_generator.sampleLastName()
                 title, noised_title = self.data_generator.generateAux(TITLES)
                 suffix, noised_suffix = self.data_generator.generateAux(
                     SUFFIXES)
@@ -56,6 +56,8 @@ class Pipeline(torch.nn.Module):
                 char_classes.append(character_classifications)
                 firsts.append(first)
                 noised_firsts.append(noised_first)
+                middle_initials.append(middle_init)
+                noised_middle_initials.append(noised_middle_init)
                 lasts.append(last)
                 noised_lasts.append(noised_last)
                 titles.append(title)
@@ -71,6 +73,8 @@ class Pipeline(torch.nn.Module):
                 self.suffix_classifier, noised_suffixes, suffixes).item()
             total_loss += self.train_DAE(self.first_DAE,
                                          noised_firsts, firsts).item()
+            total_loss += self.train_DAE(self.first_DAE,
+                                         noised_middle_initials, middle_initials).item()
             total_loss += self.train_DAE(self.last_DAE,
                                          noised_lasts, lasts).item()
 

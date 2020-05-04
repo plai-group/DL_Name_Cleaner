@@ -1,20 +1,29 @@
 import torch
 import string
+import pandas
 from Generators.NameGenerator import NameGenerator
 from Constant import DEVICE, TITLES, SUFFIXES, NAME_FORMATS
 from Utilities.Noiser import noise_name
 
-NOISE_CHARS = [c for c in string.ascii_letters] + \
-    [c for c in string.digits] + ['_', '\'', ':']
-
 
 class DataGenerator():
-    def __init__(self, first_config_pth: str = 'Config/Pretrained/first.json', last_config_pth: str = 'Config/Pretrained/last.json', first_wght_pth: str = 'Weights/Pretrained/first.path.tar', last_wght_pth: str = 'Weights/Pretrained/last.path.tar'):
+    def __init__(self, first_config_pth: str = 'Config/Pretrained/first.json', last_config_pth: str = 'Config/Pretrained/last.json', first_wght_pth: str = 'Weights/Pretrained/first.path.tar', last_wght_pth: str = 'Weights/Pretrained/last.path.tar', noise_prob: float = 0.1):
         super(DataGenerator, self).__init__()
         self.fn_generator = NameGenerator(
             first_config_pth, first_wght_pth)
         self.ln_generator = NameGenerator(
             last_config_pth, last_wght_pth)
+
+        self.fn_df = pandas.read_csv('Data/FirstNames.csv')
+        self.ln_df = pandas.read_csv('Data/LastNames.csv')
+        self.fn_probs = torch.FloatTensor(
+            self.fn_df['probs'].tolist()).to(DEVICE)
+        self.ln_probs = torch.FloatTensor(
+            self.ln_df['probs'].tolist()).to(DEVICE)
+
+        self.noise_prob = noise_prob
+        self.noise_chars = [
+            c for c in string.ascii_letters + string.digits] + ['_', '\'', ':']
 
     def generateFullName(self):
         num_formats = len(NAME_FORMATS)
@@ -24,8 +33,8 @@ class DataGenerator():
         full_name = NAME_FORMATS[format_idx]
         char_classification = full_name
 
-        first, noised_first = self.generateName(self.fn_generator)
-        last, noised_last = self.generateName(self.ln_generator)
+        first, noised_first = self.generateFirstName()
+        last, noised_last = self.generateLastName()
 
         full_name = full_name.replace('{f}', noised_first)
         char_classification = char_classification.replace(
@@ -48,14 +57,12 @@ class DataGenerator():
                     has_dot = bool(torch.distributions.Bernoulli(
                         torch.FloatTensor([0.5])).sample().item())
                     add_on = '. ' if has_dot else ' '
-                    middle = self.generateMiddleInitial()
-                    noised_middle = middle
+                    middle, noised_middle = self.generateMiddleInitial()
                     full_middle += noised_middle + add_on
                     middle_classification += (len(noised_middle)
                                               * 'm') + add_on
                 else:
-                    middle, noised_middle = self.generateName(
-                        self.fn_generator)
+                    middle, noised_middle = self.generateFirstName()
                     full_middle += noised_middle + ' '
                     middle_classification += (len(noised_middle) * 'm') + ' '
 
@@ -76,11 +83,30 @@ class DataGenerator():
 
         return full_name, char_classification
 
+    def generateFirstName(self):
+        return self.generateName(self.fn_generator)
+
+    def generateLastName(self):
+        return self.generateName(self.ln_generator)
+
     def generateName(self, generator: NameGenerator):
         name = generator.sampleName()
-        noised_name = noise_name(name, NOISE_CHARS, 0.1)
+        noised_name = noise_name(name, self.noise_chars, self.noise_prob)
 
         return name, noised_name
+
+    def sampleFirstName(self):
+        return self.sampleName(self.fn_df, self.fn_probs)
+
+    def sampleLastName(self):
+        return self.sampleName(self.ln_df, self.ln_probs)
+
+    def sampleName(self, df: pandas.DataFrame, probs: torch.Tensor):
+        idx = int(torch.distributions.Categorical(probs).sample().item())
+        name = df['name'][idx]
+        noised = noise_name(name, self.noise_chars, self.noise_prob)
+
+        return name, noised
 
     def generateAux(self, categories: list):
         length = len(categories)
@@ -88,7 +114,7 @@ class DataGenerator():
         sample_idx = int(
             torch.distributions.Categorical(probs).sample().item())
         sample = categories[sample_idx]
-        noised_sample = noise_name(sample, NOISE_CHARS, 0.1)
+        noised_sample = noise_name(sample, self.noise_chars, self.noise_prob)
 
         return sample, noised_sample
 
@@ -101,7 +127,10 @@ class DataGenerator():
         probs = torch.FloatTensor([1/initials_sz] * initials_sz).to(DEVICE)
         sample = int(torch.distributions.Categorical(probs).sample().item())
 
-        return initials[sample]
+        initial = initials[sample]
+        noised_initial = noise_name(initial, self.noise_chars, self.noise_prob)
+
+        return initial, noised_initial
 
     def hasMiddle(self, format_idx):
         template = NAME_FORMATS[format_idx]
