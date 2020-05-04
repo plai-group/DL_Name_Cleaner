@@ -185,21 +185,23 @@ class Pipeline(torch.nn.Module):
         return False
 
     def save_checkpoint(self, folder: str = 'Weights'):
-        dae_fp = os.path.join(folder, f'{self.session_name}_dae')
+        dae_fn_fp = os.path.join(folder, f'{self.session_name}_fn_dae')
+        dae_ln_fp = os.path.join(folder, f'{self.session_name}_ln_dae')
         aux_fp = os.path.join(folder, f'{self.session_name}_aux')
         classifier_fp = os.path.join(folder, f'{self.session_name}_classifier')
 
         if not os.path.exists(folder):
             os.mkdir(folder)
 
-        dae_content = {'fn_weight': self.first_DAE.state_dict(),
-                       'ln_weight': self.last_DAE.state_dict()}
+        fn_dae_content = {'weight': self.first_DAE.state_dict()}
+        ln_dae_content = {'weight': self.last_DAE.state_dict()}
         aux_content = {'title_weight': self.title_classifier.state_dict(),
                        'suffix_weight': self.suffix_classifier.state_dict()}
         classifier_content = {
             'classifier': self.character_classifier.state_dict()}
 
-        torch.save(dae_content, dae_fp)
+        torch.save(fn_dae_content, dae_fn_fp)
+        torch.save(ln_dae_content, dae_ln_fp)
         torch.save(aux_content, aux_fp)
         torch.save(classifier_content, classifier_fp)
 
@@ -207,16 +209,18 @@ class Pipeline(torch.nn.Module):
         if name is None:
             name = self.session_name
 
-        dae_fp = os.path.join(folder, f'{name}_dae')
+        fn_dae_fp = os.path.join(folder, f'{name}_fn_dae')
+        ln_dae_fp = os.path.join(folder, f'{name}_ln_dae')
         aux_fp = os.path.join(folder, f'{name}_aux')
         classifier_fp = os.path.join(folder, f'{name}_classifier')
 
-        dae_content = torch.load(dae_fp, map_location=DEVICE)
+        fn_dae_content = torch.load(fn_dae_fp, map_location=DEVICE)
+        ln_dae_content = torch.load(ln_dae_fp, map_location=DEVICE)
         aux_content = torch.load(aux_fp, map_location=DEVICE)
         classifier_content = torch.load(classifier_fp, map_location=DEVICE)
 
-        self.first_DAE.load_state_dict(dae_content['fn_weight'])
-        self.last_DAE.load_state_dict(dae_content['ln_weight'])
+        self.first_DAE.load_state_dict(fn_dae_content['weight'])
+        self.last_DAE.load_state_dict(ln_dae_content['weight'])
         self.title_classifier.load_state_dict(aux_content['title_weight'])
         self.suffix_classifier.load_state_dict(aux_content['suffix_weight'])
         self.character_classifier.load_state_dict(
