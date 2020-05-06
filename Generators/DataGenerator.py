@@ -1,3 +1,4 @@
+import re
 import torch
 import string
 import pandas
@@ -6,8 +7,17 @@ from Constant import DEVICE, TITLES, SUFFIXES, NAME_FORMATS
 from Utilities.Noiser import *
 
 
+def getClassification(name_lst: list, noised: str, classification: str):
+    ret = noised
+
+    for name in name_lst:
+        ret = ret.replace(name, len(name) * classification)
+
+    return ret
+
+
 class DataGenerator():
-    def __init__(self, first_config_pth: str = 'Config/Pretrained/first.json', last_config_pth: str = 'Config/Pretrained/last.json', first_wght_pth: str = 'Weights/Pretrained/first.path.tar', last_wght_pth: str = 'Weights/Pretrained/last.path.tar', noise_prob: float = 0.1):
+    def __init__(self, full_data_path: str = 'Data/british.csv', first_config_pth: str = 'Config/Pretrained/first.json', last_config_pth: str = 'Config/Pretrained/last.json', first_wght_pth: str = 'Weights/Pretrained/first.path.tar', last_wght_pth: str = 'Weights/Pretrained/last.path.tar', noise_prob: float = 0.1):
         super(DataGenerator, self).__init__()
         self.fn_generator = NameGenerator(
             first_config_pth, first_wght_pth)
@@ -16,6 +26,7 @@ class DataGenerator():
 
         self.fn_df = pandas.read_csv('Data/FirstNames.csv')
         self.ln_df = pandas.read_csv('Data/LastNames.csv')
+        self.full_df = pandas.read_csv(full_data_path)
         self.fn_probs = torch.FloatTensor(
             self.fn_df['probs'].tolist()).to(DEVICE)
         self.ln_probs = torch.FloatTensor(
@@ -82,6 +93,36 @@ class DataGenerator():
             char_classification += ' ' + (len(noised_suffix) * 's')
 
         return full_name, char_classification
+
+    def sampleFullName(self):
+        df_len = len(self.full_df)
+        probs_tensor = torch.FloatTensor([1/df_len] * df_len)
+        sample_idx = int(torch.distributions.Categorical(
+            probs_tensor).sample().item())
+
+        row = self.full_df.iloc[sample_idx]
+        full = row['name']
+        classification = full
+        first = re.split(r'[-\']', row['first'])
+        middle = row['middle']
+        last = re.split(r'[-\']', row['last'])
+        title = row['title']
+        suffix = row['suffix']
+
+        classification = getClassification(first, classification, 'f')
+        classification = getClassification(last, classification, 'l')
+
+        if isinstance(middle, str):
+            middle = re.split(r'[-\']', middle)
+            classification = getClassification(middle, classification, 'm')
+
+        if isinstance(title, str):
+            classification = getClassification(title, classification, 't')
+
+        if isinstance(suffix, str):
+            classification = getClassification(suffix, classification, 's')
+
+        return full, classification
 
     def generateFirstName(self):
         return self.generateName(self.fn_generator)

@@ -52,7 +52,11 @@ class Pipeline():
             suffixes, noised_suffixes = [], []
 
             for j in range(batch_sz):
-                full, character_classifications = self.data_generator.generateFullName()
+                if bool(torch.distributions.Bernoulli(torch.FloatTensor([0.5])).sample().item()):
+                    full, character_classifications = self.data_generator.generateFullName()
+                else:
+                    full, character_classifications = self.data_generator.sampleFullName()
+                
                 first, noised_first = self.data_generator.sampleFirstName()
                 middle_init, noised_middle_init = self.data_generator.generateMiddleInitial()
                 last, noised_last = self.data_generator.sampleLastName()

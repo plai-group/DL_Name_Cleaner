@@ -16,4 +16,5 @@ DAE_OUTPUT_SZ = len(DAE_OUTPUT)
 TITLES = ['Mr', 'Ms', 'Dr', 'Mrs', 'Sir', "Ma'am", 'Madam']
 SUFFIXES = ['Sr', 'Snr', 'Jr', 'Jnr', 'PhD', 'MD', 'I', 'II', 'III', 'IV']
 NAME_FORMATS = ['{f} {l}', '{f} {m} {l}', '{l}, {f}', '{l}, {f} {m}']
-CHARACTER_CLASSIFICATIONS = ['t', 'f', 'm', 'l', 's', '.', ' ', ',', EOS, PAD]
+CHARACTER_CLASSIFICATIONS = ['t', 'f', 'm', 'l',
+                             's', '.', ' ', ',', '-', '\'', EOS, PAD]
