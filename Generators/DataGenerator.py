@@ -101,19 +101,14 @@ class DataGenerator():
             probs_tensor).sample().item())
 
         row = self.full_df.iloc[sample_idx]
-        full = row['name']
+        full, first, middle, last, title, suffix = row['name'], row['first'], row[
+            'middle'], row['last'], row['title'], row['suffix']
         classification = full
-        first = re.split(r'[-\']', row['first'])
-        middle = row['middle']
-        last = re.split(r'[-\']', row['last'])
-        title = row['title']
-        suffix = row['suffix']
 
         classification = getClassification(first, classification, 'f')
         classification = getClassification(last, classification, 'l')
 
         if isinstance(middle, str):
-            middle = re.split(r'[-\']', middle)
             classification = getClassification(middle, classification, 'm')
 
         if isinstance(title, str):

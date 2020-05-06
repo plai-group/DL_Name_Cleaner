@@ -267,7 +267,7 @@ class Pipeline():
     def save_checkpoint(self, folder: str = 'Weights'):
         dae_fn_fp = os.path.join(folder, f'{self.session_name}_fn_dae')
         dae_ln_fp = os.path.join(folder, f'{self.session_name}_ln_dae')
-        aux_fp = os.path.join(folder, f'{self.session_name}_aux')
+        aux_fp = os.path.join(folder, f'{self.session_name}_auxilary')
         classifier_fp = os.path.join(folder, f'{self.session_name}_classifier')
 
         if not os.path.exists(folder):
@@ -291,7 +291,7 @@ class Pipeline():
 
         fn_dae_fp = os.path.join(folder, f'{name}_fn_dae')
         ln_dae_fp = os.path.join(folder, f'{name}_ln_dae')
-        aux_fp = os.path.join(folder, f'{name}_aux')
+        aux_fp = os.path.join(folder, f'{name}_auxilary')
         classifier_fp = os.path.join(folder, f'{name}_classifier')
 
         fn_dae_content = torch.load(fn_dae_fp, map_location=DEVICE)
