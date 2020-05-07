@@ -19,6 +19,35 @@ def doesTensorOnlyHasValues(tensor: torch.Tensor, values: list):
     return True
 
 
+def parse_name(obs: str, classification: list):
+    '''
+    Parse name into components based on classification list, which classifies each obs
+    index as first, middle, last, title, suffix, sep or pad
+    '''
+    class_str = ''.join(str(c) for c in classification)
+    titles, firsts, middles, lasts, suffixes = [], [], [], [], []
+
+    for i in range(len(CHARACTER_CLASSIFICATIONS)):
+        curr_class = CHARACTER_CLASSIFICATIONS[i]
+        start = class_str.find(curr_class)
+        end = class_str.rfind(curr_class) + 1
+
+        if start < 0:
+            continue
+        elif curr_class is 't':
+            titles = obs[start:end].split()
+        elif curr_class is 'f':
+            firsts = obs[start:end].split()
+        elif curr_class is 'm':
+            middles = obs[start:end].split()
+        elif curr_class is 'l':
+            lasts = obs[start:end].split()
+        elif curr_class is 's':
+            suffixes = obs[start:end].split()
+
+    return titles, firsts, middles, lasts, suffixes
+
+
 class Pipeline():
     def __init__(self, name: str, hidden_sz: int = 128, num_layers: int = 3, learning_rate: float = 0.00005):
         super(Pipeline, self).__init__()
@@ -39,7 +68,7 @@ class Pipeline():
 
         self.learning_rate = learning_rate
 
-    def train(self, batch_sz: int, iterations: int, save_every: int = 1, plot_every: int = 1) -> int:
+    def train(self, batch_sz: int, iterations: int, save_every: int = 500, plot_every: int = 500) -> int:
         all_losses = []
         total_loss = 0
 
@@ -56,7 +85,7 @@ class Pipeline():
                     full, character_classifications = self.data_generator.generateFullName()
                 else:
                     full, character_classifications = self.data_generator.sampleFullName()
-                
+
                 first, noised_first = self.data_generator.sampleFirstName()
                 middle_init, noised_middle_init = self.data_generator.generateMiddleInitial()
                 last, noised_last = self.data_generator.sampleLastName()
@@ -193,6 +222,23 @@ class Pipeline():
         return False
 
     def test_name(self, name):
+        classification_lst = self.test_character_classifier([name])
+
+        title, firsts, middles, lasts, suffix = parse_name(
+            name, classification_lst)
+
+        cleaned_firsts = self.test_DAE(
+            self.first_DAE, firsts) if len(firsts) > 0 else None
+        cleaned_middles = self.test_DAE(
+            self.first_DAE, middles) if len(middles) > 0 else None
+        cleaned_lasts = self.test_DAE(
+            self.last_DAE, lasts) if len(lasts) > 0 else None
+        cleaned_title = self.test_aux_classifier(
+            self.title_classifier, title) if len(title) > 0 else None
+        cleaned_suffix = self.test_aux_classifier(
+            self.suffix_classifier, suffix) if len(suffix) > 0 else None
+        print('blah')
+
         return False
 
     def test_character_classifier(self, inputs: list) -> list:
@@ -205,8 +251,6 @@ class Pipeline():
             inputs, in_vocab, max_len)).transpose(0, 1).to(DEVICE)
         length_lst = [len(name) for name in inputs]
         length_tnsr = torch.LongTensor(length_lst).to(DEVICE)
-        trg = torch.LongTensor(convertToIdxList(
-            trg, out_vocab, max_len)).transpose(0, 1).to(DEVICE)
 
         outputs, hidden = self.character_classifier.encode(input, length_tnsr)
 
@@ -214,8 +258,9 @@ class Pipeline():
 
         for i in range(max_len):
             probs = self.character_classifier.decode(outputs[i])
-            values, _ = probs.max(2)
-            classifications.extend([out_vocab[values[j]] for j in len(values)])
+            _, idxes = probs.max(1)
+            classifications.extend([out_vocab[idxes[j].item()]
+                                    for j in range(len(idxes))])
 
         return classifications
 
@@ -232,9 +277,9 @@ class Pipeline():
                                 for title in trg]).to(DEVICE)
 
         output = classifier.forward(input, len_input)
-        max_values, _ = output.max(2)
+        _, max_idxes = output.max(1)
 
-        return [out_vocab[max_values[i]] for i in len(max_values)]
+        return [out_vocab[max_idxes[i].item()] for i in len(max_idxes)]
 
     def test_DAE(self, dae: DenoisingAutoEncoder, inputs: list) -> list:
         batch_sz = len(inputs)
@@ -248,7 +293,8 @@ class Pipeline():
         len_input = torch.LongTensor([len(name) for name in inputs]).to(DEVICE)
 
         _, hidden = dae.encode(encoder_in, len_input)
-        input = torch.LongTensor([in_vocab.index(SOS)] * batch_sz).to(DEVICE)
+        input = torch.LongTensor(
+            [in_vocab.index(SOS)] * batch_sz).unsqueeze(0).to(DEVICE)
         # Should be max_trg_len + 1 for SOS and EOS
 
         all_EOS_or_PAD = False
@@ -257,7 +303,7 @@ class Pipeline():
 
         while not all_EOS_or_PAD:
             output, hidden = dae.forward(input, hidden)
-            input, _ = output.max(2)
+            _, input = output.max(2)
             cleaned_names.extend([out_vocab[input[i]]
                                   for i in range(len(input))])
             all_EOS_or_PAD = doesTensorOnlyHasValues(input, end_of_seq_signals)
@@ -285,7 +331,7 @@ class Pipeline():
         torch.save(aux_content, aux_fp)
         torch.save(classifier_content, classifier_fp)
 
-    def load_checkpoint(self, name: str, folder: str = 'Weights'):
+    def load_checkpoint(self, name: str = None, folder: str = 'Weights'):
         if name is None:
             name = self.session_name
 

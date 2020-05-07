@@ -16,9 +16,9 @@ class DenoisingAutoEncoder(nn.Module):
 
         self.encoder_embed = nn.Embedding(self.input_sz, embed_dim)
         self.encoder_lstm = nn.LSTM(
-            embed_dim, hidden_sz, num_layers, bidirectional=True)
+            embed_dim, hidden_sz, num_layers)
         self.decoder_embed = nn.Embedding(self.output_sz, embed_dim)
-        self.decoder_lstm = nn.LSTM(embed_dim, hidden_sz, num_layers * 2)
+        self.decoder_lstm = nn.LSTM(embed_dim, hidden_sz, num_layers)
         self.decoder_fc1 = nn.Linear(hidden_sz, self.output_sz)
         self.sigmoid = nn.Sigmoid()
         self.decoder_fc2 = nn.Linear(self.output_sz, self.output_sz)
@@ -49,5 +49,5 @@ class DenoisingAutoEncoder(nn.Module):
         return probs, hidden
 
     def init_hidden(self, batch_sz):
-        return (torch.zeros(self.num_layers * 2, batch_sz, self.hidden_sz).to(DEVICE),
-                torch.zeros(self.num_layers * 2, batch_sz, self.hidden_sz).to(DEVICE))
+        return (torch.zeros(self.num_layers, batch_sz, self.hidden_sz).to(DEVICE),
+                torch.zeros(self.num_layers, batch_sz, self.hidden_sz).to(DEVICE))
