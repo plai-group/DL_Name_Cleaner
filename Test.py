@@ -20,4 +20,4 @@ NUM_LAYERS = args.num_layers
 
 pipeline = Pipeline(SESSION_NAME, HIDDEN_SZ, NUM_LAYERS)
 pipeline.load_checkpoint()
-pipeline.test_name('Jason Jinsoo Yoo')
+pipeline.test_name('Jason Yoo')
