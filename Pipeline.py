@@ -237,9 +237,8 @@ class Pipeline():
             self.title_classifier, title) if len(title) > 0 else None
         cleaned_suffix = self.test_aux_classifier(
             self.suffix_classifier, suffix) if len(suffix) > 0 else None
-        print('blah')
 
-        return False
+        return {'first': cleaned_firsts, 'middle': cleaned_middles, 'last': cleaned_lasts, 'title': cleaned_title, 'suffix': cleaned_suffix}
 
     def test_character_classifier(self, inputs: list) -> list:
         batch_sz = len(inputs)
