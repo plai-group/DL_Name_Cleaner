@@ -272,8 +272,6 @@ class Pipeline():
         input = torch.LongTensor(convertToIdxList(
             inputs, in_vocab, max_src_len)).transpose(0, 1).to(DEVICE)
         len_input = torch.LongTensor([len(name) for name in inputs]).to(DEVICE)
-        trg = torch.LongTensor([out_vocab.index(title)
-                                for title in trg]).to(DEVICE)
 
         output = classifier.forward(input, len_input)
         _, max_idxes = output.max(1)
